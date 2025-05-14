@@ -33,38 +33,17 @@ def normalizar_codigo_barras(texto):
             return codigo[:47]
     return None
 
-def extrair_data_pagamento(texto, cliente):
-    if cliente == "julia":
-        match = re.search(r"(\d{2}/\d{2}/\d{4})\s*data de d[êe]bito", texto, re.IGNORECASE)
-        if match:
-            return match.group(1)
-    else:
-        match = re.search(r"(?:data(?: do pagamento| de d[êe]bito| agendamento| de agendamento| agendamento)[\s:]*)(\d{2}/\d{2}/\d{4})", texto, re.IGNORECASE)
-        if match:
-            return match.group(1)
-    return None
+def extrair_data_pagamento(texto):
+    datas = re.findall(r'\d{2}/\d{2}/\d{4}', texto)
+    datas_datetime = [datetime.strptime(data, '%d/%m/%Y') for data in datas]
+    max_data = max(datas_datetime)
+    return max_data.strftime('%d/%m/%Y')
 
-def extrair_valor_cobrado(texto, cliente):
-    if cliente == "julia":
-        padroes_julia = [
-            r"R?\$?\s*(\d{1,3}(?:\.\d{3})*,\d{2})\s*valor total",
-            r"R?\$?\s*(\d{1,3}(?:\.\d{3})*,\d{2})\s*valor do pagamento",
-            r"R?\$?\s*(\d{1,3}(?:\.\d{3})*,\d{2})\s*valor"
-        ]
-        for padrao in padroes_julia:
-            match = re.search(padrao, texto, re.IGNORECASE)
-            if match:
-                return match.group(1).replace(".", "").replace(",", ".")
-    else:
-        padroes_outros = [
-            r"(?:valor total|valor cobrado)[\s:]*R?\$?\s*(\d{1,3}(?:\.\d{3})*,\d{2})",
-            r"R?\$?\s*(\d{1,3}(?:\.\d{3})*,\d{2})"
-        ]
-        for padrao in padroes_outros:
-            match = re.search(padrao, texto, re.IGNORECASE)
-            if match:
-                return match.group(1).replace(".", "").replace(",", ".")
-    return None
+def extrair_valor_cobrado(texto):
+    lista_str = re.findall(r'R?\$?\s*(\d{1,6}(?:\.\d{3})*,\d{2})', texto, re.IGNORECASE)
+    lista_replace = [item.replace(".", "").replace(",", ".") for item in lista_str]
+    lista_valores = [float(item) for item in lista_replace]
+    return max(lista_valores) if lista_valores else None
 
 def identificar_cliente(texto):
     texto = texto.lower()
@@ -111,7 +90,9 @@ def processar_pdfs():
     for arquivo in arquivos_pdf:
         try:
             reader = PdfReader(arquivo)
-            texto = "\n".join(page.extract_text() or '' for page in reader.pages)
+            if len(reader.pages) > 1:
+                registrar_log(f"[ALERTA] {arquivo} - PDF tem mais de uma página. Apenas a primeira página será processada.")
+            texto = "\n".join(page.extract_text() or '' for page in reader.pages[:1]) # Modificado para pegar só a primeira página
 
             cliente = identificar_cliente(texto)
             if not cliente:
@@ -126,8 +107,8 @@ def processar_pdfs():
             codigo_barras = normalizar_codigo_barras(texto)
             if not codigo_barras:
                 registrar_log(f"[WARNING] {arquivo} - Código de barras não encontrado no PDF.")
-            data_pagamento = extrair_data_pagamento(texto, cliente)
-            valor_cobrado = extrair_valor_cobrado(texto, cliente)
+            data_pagamento = extrair_data_pagamento(texto)
+            valor_cobrado = extrair_valor_cobrado(texto)
 
             cabecalho = {str(cell.value).strip().lower(): idx for idx, cell in enumerate(plan[1]) if cell.value}
             campos = ["id", "pagamento", "vencimento", "codigo de barras", "status", "origem"]
