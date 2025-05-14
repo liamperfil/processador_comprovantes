@@ -149,14 +149,21 @@ def processar_pdfs():
                 print(f"Data de pagamento: {data_pagamento or 'N/A'}")
                 print(f"Valor cobrado: {valor_cobrado or 'N/A'}")
                 print(f"\nResumo do conteúdo:\n{resumo}")
-                id_manual = input("\nDigite o ID correspondente ou pressione Enter para ignorar: ").strip()
+                try:
+                    id_manual = int(input("\nDigite o ID correspondente ou pressione Enter para ignorar: ").strip())
+                except ValueError:
+                    if not input("\nID inválido. Pressione Enter para ignorar ou digite qualquer coisa para tentar novamente: "):
+                        continue  # Ignora se Enter for pressionado
+                    else:
+                        continue  # Volta ao início do loop para tentar novamente
 
-                if not id_manual:
-                    continue
-                input_id = re.sub(r"^0+", "", id_manual)
                 for row in plan.iter_rows(min_row=2):
-                    plan_id = re.sub(r"^0+", "", str(row[cabecalho["id"]].value).strip())
-                    if plan_id == input_id:
+                    plan_id_value = row[cabecalho["id"]].value
+                    if isinstance(plan_id_value, (int, float)):
+                        plan_id = int(plan_id_value)  # Converter para int se for int ou float
+                    else:
+                        plan_id = int(str(plan_id_value).strip())  # Converter para int após limpar a string
+                    if plan_id == id_manual:
                         if not row[cabecalho["pagamento"]].value:
                             linha_encontrada = row
                         break
@@ -194,7 +201,7 @@ def processar_pdfs():
                     destino = os.path.join(destino, novo_nome) # Caminho completo com o nome do arquivo
                     
                     shutil.move(arquivo, destino)
-                    registrar_log(f"[INFO] {arquivo} → {novo_nome} | Processado com sucesso para '{destino}'.") # Atualizado o log com o caminho completo
+                    registrar_log(f"[INFO] {arquivo} → {novo_nome} - Processado com sucesso.")
                 else:
                     registrar_log(f"[WARNING] {arquivo} - Data de pagamento e vencimento não encontradas.")
             elif not data_pagamento:
