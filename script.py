@@ -47,7 +47,7 @@ def extrair_valor_cobrado(texto):
 
 def identificar_cliente(texto):
     texto = texto.lower()
-    match = re.search(r"(cliente|empresa)\s*:\s*(.+)", texto, re.IGNORECASE)
+    match = re.search(r"(cliente|empresa):?\s*(.+)", texto, re.IGNORECASE)
     if match:
         linha_cliente = match.group(2).strip().lower()
         if "amoedo" in linha_cliente:
