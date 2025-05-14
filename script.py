@@ -185,14 +185,16 @@ def processar_pdfs():
 
                     id_valor_raw = linha_encontrada[cabecalho["id"]].value
                     id_valor = str(int(float(id_valor_raw))) if isinstance(id_valor_raw, (float, int)) else str(id_valor_raw).lstrip("0")
-                    
                     data_para_nome = data_pagamento.strftime("%Y%m%d") if data_pagamento else ""  # Formatando a data
                     novo_nome = f"{cliente}_{data_para_nome}_{id_valor}.pdf" if data_para_nome else f"{cliente}_{id_valor}.pdf" # Criando o novo nome
                     
-                    destino = os.path.join(cliente, novo_nome)
-                    os.makedirs(cliente, exist_ok=True)
+                    ano_mes = data_pagamento.strftime("%Y-%m") if data_pagamento else datetime.now().strftime("%Y-%m") # Usar a data atual se data_pagamento for None
+                    destino = os.path.join("comprovantes", ano_mes)
+                    os.makedirs(destino, exist_ok=True)
+                    destino = os.path.join(destino, novo_nome) # Caminho completo com o nome do arquivo
+                    
                     shutil.move(arquivo, destino)
-                    registrar_log(f"[INFO] {arquivo} → {novo_nome} | Processado com sucesso para '{cliente}'.")
+                    registrar_log(f"[INFO] {arquivo} → {novo_nome} | Processado com sucesso para '{destino}'.") # Atualizado o log com o caminho completo
                 else:
                     registrar_log(f"[WARNING] {arquivo} - Data de pagamento e vencimento não encontradas.")
             elif not data_pagamento:
