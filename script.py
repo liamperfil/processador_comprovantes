@@ -152,13 +152,15 @@ def processar_pdfs():
             if not linha_encontrada:
                 os.system("cls" if platform.system() == "Windows" else "clear")
 
-                print(f"{arquivo} - Código de barras não encontrado na planilha '{cliente}'.")
+                print(f"---------------- Código de barras não encontrado na planilha {cliente} ----------------")
+                print(f"\nInformações extraídas do PDF:")
+                print(f"Arquivo: {arquivo}.")
                 texto_limpo = re.sub(r"\s+", " ", texto).strip()
-                resumo = texto_limpo[:700] + "..." if len(texto_limpo) > 700 else texto_limpo
-                print(f"\nInformações extraídas do PDF {arquivo}:")
+                resumo = texto_limpo[:800] + "..." if len(texto_limpo) > 800 else texto_limpo
                 print(f"Cliente: {cliente}")
                 print(f"Data de pagamento: {data_pagamento or 'N/A'}")
                 print(f"Valor cobrado: {valor_cobrado or 'N/A'}")
+                print(f"Código de barras: {codigo_barras or 'N/A'}")
                 print(f"\nResumo do conteúdo:\n{resumo}")
                 try:
                     id_manual = int(input("\nDigite o ID correspondente ou pressione Enter para ignorar: ").strip())
