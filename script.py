@@ -1,6 +1,7 @@
 import os
 import re
 import shutil
+import platform
 from datetime import datetime
 from PyPDF2 import PdfReader
 from openpyxl import load_workbook
@@ -45,13 +46,24 @@ def extrair_data_pagamento(texto, cliente):
 
 def extrair_valor_cobrado(texto, cliente):
     if cliente == "julia":
-        match = re.search(r"R?\$?\s*(\d{1,3}(?:\.\d{3})*,\d{2})\s*valor total", texto, re.IGNORECASE)
-        if match:
-            return match.group(1).replace(".", "").replace(",", ".")
+        padroes_julia = [
+            r"R?\$?\s*(\d{1,3}(?:\.\d{3})*,\d{2})\s*valor total",
+            r"R?\$?\s*(\d{1,3}(?:\.\d{3})*,\d{2})\s*valor do pagamento",
+            r"R?\$?\s*(\d{1,3}(?:\.\d{3})*,\d{2})\s*valor"
+        ]
+        for padrao in padroes_julia:
+            match = re.search(padrao, texto, re.IGNORECASE)
+            if match:
+                return match.group(1).replace(".", "").replace(",", ".")
     else:
-        match = re.search(r"(?:valor total|valor cobrado)[\s:]*R?\$?\s*(\d{1,3}(?:\.\d{3})*,\d{2})", texto, re.IGNORECASE)
-        if match:
-            return match.group(1).replace(".", "").replace(",", ".")
+        padroes_outros = [
+            r"(?:valor total|valor cobrado)[\s:]*R?\$?\s*(\d{1,3}(?:\.\d{3})*,\d{2})",
+            r"R?\$?\s*(\d{1,3}(?:\.\d{3})*,\d{2})"
+        ]
+        for padrao in padroes_outros:
+            match = re.search(padrao, texto, re.IGNORECASE)
+            if match:
+                return match.group(1).replace(".", "").replace(",", ".")
     return None
 
 def identificar_cliente(texto):
@@ -135,15 +147,14 @@ def processar_pdfs():
                 if linhas_possiveis:
                     linha_encontrada = linhas_possiveis[0]
                 elif any(str(row[cabecalho["codigo de barras"]].value).strip() == codigo_barras for row in plan.iter_rows(min_row=2)):
-                    registrar_log(f"[INFO] {arquivo} - Código de barras encontrado, mas todas as linhas já foram processadas.")
+                    registrar_log(f"[WARNING] {arquivo} - Código de barras encontrado, mas todas as linhas já foram processadas.")
 
             if not linha_encontrada:
-                import platform
                 os.system("cls" if platform.system() == "Windows" else "clear")
 
                 print(f"{arquivo} - Código de barras não encontrado na planilha '{cliente}'.")
                 texto_limpo = re.sub(r"\s+", " ", texto).strip()
-                resumo = texto_limpo[:550] + "..." if len(texto_limpo) > 550 else texto_limpo
+                resumo = texto_limpo[:700] + "..." if len(texto_limpo) > 700 else texto_limpo
                 print(f"\nInformações extraídas do PDF {arquivo}:")
                 print(f"Cliente: {cliente}")
                 print(f"Data de pagamento: {data_pagamento or 'N/A'}")
