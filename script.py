@@ -118,7 +118,7 @@ def processar_pdfs():
             valor_cobrado = extrair_valor_cobrado(texto, cliente)
 
             cabecalho = {str(cell.value).strip().lower(): idx for idx, cell in enumerate(plan[1]) if cell.value}
-            campos = ["id", "pagamento", "codigo de barras", "status", "origem"]
+            campos = ["id", "pagamento", "vencimento", "codigo de barras", "status", "origem"]
             if not all(c in cabecalho for c in campos):
                 registrar_log(f"[ALERT] {arquivo} - Cabeçalho incompleto na planilha '{cliente}'.")
                 continue
@@ -185,7 +185,10 @@ def processar_pdfs():
 
                     id_valor_raw = linha_encontrada[cabecalho["id"]].value
                     id_valor = str(int(float(id_valor_raw))) if isinstance(id_valor_raw, (float, int)) else str(id_valor_raw).lstrip("0")
-                    novo_nome = f"{id_valor}.pdf"
+                    
+                    data_para_nome = data_pagamento.strftime("%Y%m%d") if data_pagamento else ""  # Formatando a data
+                    novo_nome = f"{cliente}_{data_para_nome}_{id_valor}.pdf" if data_para_nome else f"{cliente}_{id_valor}.pdf" # Criando o novo nome
+                    
                     destino = os.path.join(cliente, novo_nome)
                     os.makedirs(cliente, exist_ok=True)
                     shutil.move(arquivo, destino)
