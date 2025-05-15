@@ -47,7 +47,7 @@ def extrair_valor_cobrado(texto):
 
 def identificar_cliente(texto):
     texto = texto.lower()
-    match = re.search(r"(cliente|empresa):?\s*(.+)", texto, re.IGNORECASE)
+    match = re.search(r"(cliente|empresa)\s*:\s*(.+)", texto, re.IGNORECASE)
     if match:
         linha_cliente = match.group(2).strip().lower()
         if "amoedo" in linha_cliente:
@@ -76,7 +76,7 @@ def criar_backup_planilha():
     now = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_path = os.path.join(log_dir, f"pagamentos_backup_{now}.xlsx")
     shutil.copy2(arquivo_xlsx, backup_path)
-    registrar_log(f"[INFO] Backup criado: {backup_path}")
+    registrar_log(f"[SUCESSO] Backup criado: {backup_path}")
 
 def processar_pdfs():
     arquivos_pdf = [arq for arq in os.listdir() if arq.lower().endswith(".pdf")]
@@ -91,29 +91,29 @@ def processar_pdfs():
         try:
             reader = PdfReader(arquivo)
             if len(reader.pages) > 1:
-                registrar_log(f"[ALERTA] {arquivo} - PDF tem mais de uma página. Apenas a primeira página será processada.")
+                registrar_log(f"[AVISO] {arquivo} - PDF tem mais de uma página. Apenas a primeira página será processada.")
             texto = "\n".join(page.extract_text() or '' for page in reader.pages[:1]) # Modificado para pegar só a primeira página
 
             cliente = identificar_cliente(texto)
             if not cliente:
-                registrar_log(f"[WARNING] {arquivo} - Cliente não identificado.")
+                registrar_log(f"[AVISO] {arquivo} - Cliente não identificado.")
                 continue
 
             if cliente not in wb.sheetnames:
-                registrar_log(f"[WARNING] {arquivo} - Planilha '{cliente}' não encontrada.")
+                registrar_log(f"[AVISO] {arquivo} - Planilha '{cliente}' não encontrada.")
                 continue
 
             plan = wb[cliente]
             codigo_barras = normalizar_codigo_barras(texto)
             if not codigo_barras:
-                registrar_log(f"[WARNING] {arquivo} - Código de barras não encontrado no PDF.")
+                registrar_log(f"[AVISO] {arquivo} - Código de barras não encontrado no PDF.")
             data_pagamento = extrair_data_pagamento(texto)
             valor_cobrado = extrair_valor_cobrado(texto)
 
             cabecalho = {str(cell.value).strip().lower(): idx for idx, cell in enumerate(plan[1]) if cell.value}
             campos = ["id", "pagamento", "vencimento", "codigo de barras", "status", "origem"]
             if not all(c in cabecalho for c in campos):
-                registrar_log(f"[ALERT] {arquivo} - Cabeçalho incompleto na planilha '{cliente}'.")
+                registrar_log(f"[ERRO] {arquivo} - Cabeçalho incompleto na planilha '{cliente}'.")
                 continue
 
             linha_encontrada = None
@@ -128,7 +128,7 @@ def processar_pdfs():
                 if linhas_possiveis:
                     linha_encontrada = linhas_possiveis[0]
                 elif any(str(row[cabecalho["codigo de barras"]].value).strip() == codigo_barras for row in plan.iter_rows(min_row=2)):
-                    registrar_log(f"[WARNING] {arquivo} - Código de barras encontrado, mas todas as linhas já foram processadas.")
+                    registrar_log(f"[AVISO] {arquivo} - Código de barras encontrado, mas todas as linhas já foram processadas.")
 
             if not linha_encontrada:
                 os.system("cls" if platform.system() == "Windows" else "clear")
@@ -182,7 +182,7 @@ def processar_pdfs():
                             elif "valor do documento" in cabecalho:
                                 linha_encontrada[cabecalho["valor do documento"]].value = valor_float
                         except ValueError:
-                            registrar_log(f"[WARNING] {arquivo} - Valor cobrado inválido: {valor_cobrado}")
+                            registrar_log(f"[AVISO] {arquivo} - Valor cobrado inválido: {valor_cobrado}")
 
                     id_valor_raw = linha_encontrada[cabecalho["id"]].value
                     id_valor = str(int(float(id_valor_raw))) if isinstance(id_valor_raw, (float, int)) else str(id_valor_raw).lstrip("0")
@@ -195,19 +195,19 @@ def processar_pdfs():
                     destino = os.path.join(destino, novo_nome) # Caminho completo com o nome do arquivo
                     
                     shutil.move(arquivo, destino)
-                    registrar_log(f"[INFO] {arquivo} → {novo_nome} - Processado com sucesso.")
+                    registrar_log(f"[SUCESSO] {arquivo} → {novo_nome} - Processado com sucesso.")
                 else:
-                    registrar_log(f"[WARNING] {arquivo} - Data de pagamento e vencimento não encontradas.")
+                    registrar_log(f"[AVISO] {arquivo} - Data de pagamento e vencimento não encontradas.")
             elif not data_pagamento:
-                registrar_log(f"[WARNING] {arquivo} - Data de pagamento não encontrada.")
+                registrar_log(f"[AVISO] {arquivo} - Data de pagamento não encontrada.")
             else:
-                registrar_log(f"[WARNING] {arquivo} - Nenhuma linha correspondente encontrada com ID informado.")
+                registrar_log(f"[AVISO] {arquivo} - Nenhuma linha correspondente encontrada com ID informado.")
 
         except Exception as e:
-            registrar_log(f"[ALERT] {arquivo} - Erro durante o processamento: {e}")
+            registrar_log(f"[ERRO] {arquivo} - Erro durante o processamento: {e}")
 
     wb.save(arquivo_xlsx)
-    registrar_log("[INFO] 📄 Planilha salva com sucesso.")
+    registrar_log("[SUCESSO] 📄 Planilha salva com sucesso.")
 
 if __name__ == "__main__":
     processar_pdfs()
