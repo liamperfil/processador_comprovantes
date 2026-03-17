@@ -10,7 +10,7 @@ Criar um script Python que:
 
 ## 📂 Estrutura
 - **Planilha:** `pagamentos.xlsx`
-  - **Abas:** `amoedo`, `beatriz`, `cavalcante`, `dsouza`, `julia`
+  - **Abas:** `a`, `b`, `c`, `d`, `j`
   - **Colunas:** `id`, `pagamento`, `vencimento`, `beneficiario`, `valor do documento`, `valor cobrado`, `documento`, `codigo de barras`, `categoria`, `status`, `origem`
 
 - **Entrada:** PDFs na raiz do projeto  
